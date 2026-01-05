@@ -6,6 +6,7 @@
 
 pip install openai==1.58.1
 pip install python-dotenv
+pip install streamlit==1.41.1
 
 # 가상 환경 활성화(터미널 창에 입력)
 
@@ -19,3 +20,4 @@ pip install python-dotenv
 Run 방법
 
 기본적인 .py 파일 => python (파일위치)/(파일명).py
+steamlit 구동 => streamlit run (파일명).py
