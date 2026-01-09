@@ -20,7 +20,7 @@ pip install yfinance(야후 파이낸스 가져오는 라이브러리)
 
 # 가상 환경 활성화(터미널 창에 입력)
 
-.\GAP\Scripts\activate
+.\GAPR\Scripts\activate
 
     위의 방법이 안될시
     1. powershell 관리자 권한 실행
