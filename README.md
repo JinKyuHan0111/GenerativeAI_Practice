@@ -18,6 +18,8 @@ pip install PyMuPDF (PDF파일 전처리용)
 
 pip install yfinance(야후 파이낸스 가져오는 라이브러리)
 
+pip install tabulate (DataFrame을 Markdown 형식으로 변환해주는 라이브러리)
+
 # 가상 환경 활성화(터미널 창에 입력)
 
 .\GAPR\Scripts\activate
