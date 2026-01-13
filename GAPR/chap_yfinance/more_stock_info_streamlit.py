@@ -1,51 +1,24 @@
 from openai import OpenAI
 from dotenv import load_dotenv
+#정의한 함수들 모두 포함하기
 from gpt_functions_more import tools, get_current_time, get_yf_stock_info, get_yf_stock_history, get_yf_stock_recommendations
 import os
 import json
 import streamlit as st
-from collections import defaultdict
 
 load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")
 
 client = OpenAI(api_key=api_key)
 
-def tool_list_to_obj(tools):
-    tool_calls_dict = defaultdict(lambda: {"id":None, "function":{"arguments":"", "name":None}, "type":None})
-
-    for tool in tools:
-        if tool_call.id is not None:
-            tool_calls_dict[tool_call.index]["id"] = tool_call.id
-        
-        if tool_call.function.name is not None:
-            tool_calls_dict[tool_call.index]["function"]["name"] = tool_call.function.name
-
-        tool_calls_dict[tool_call.index]["function"]["arguments"] = tool_call.function.arguments
-        
-        if tool_call.type is not None:
-            tool_calls_dict[tool_call.index]["type"] = tool_call.type
-    
-    tool_calls_list = list(tool_calls_dict.values())
-
-    return tool_calls_list
-    
-
 #AI 응답 생성 함수
-#GPT가 응답을 한번에 내놓지 않고, 중간중간 값을 내보냄냄
-def get_ai_response(messages, tools=None, stream=True):
+def get_ai_response(messages, tools=None):
     response = client.chat.completions.create(
         model = "gpt-4o-mini",
-        stream = stream,
         messages = messages,
         tools = tools,
     )
-
-    if stream:
-        for chunk in response:
-            yield chunk
-    else:
-        return response
+    return response
 
 st.title("주식도 잘 알려주는 챗봇")
 
@@ -56,6 +29,9 @@ if "messages" not in st.session_state:
     ]
 
 for msg in st.session_state.messages:
+    #불필요한 출력을 없애기 위해 assistant와 user만 출력
+    #if msg["role"] == "assistant" or msg["role"] == "user":
+    #어떤 함수를 호출했는지 확인하기 위해 전체 내용을 띄움움
     st.chat_message(msg["role"]).write(msg["content"])
 
 if user_input := st.chat_input():
@@ -63,39 +39,10 @@ if user_input := st.chat_input():
     st.chat_message("user").write(user_input)
 
     ai_response = get_ai_response(st.session_state.messages, tools=tools) # AI 응답 생성
+    ai_message = ai_response.choices[0].message
+    print(ai_message)# 응답 객체 전체 출력 (디버깅용)
 
-    #작은 단위의 글을 출력하기 위해 코드 추가
-    content=''
-    tool_calls = None
-    tool_calls_chunk = []
-
-    with st.chat_message("assistant").empty():
-        for chunk in ai_response:
-            content_chunk = chunk.choices[0].delta.content
-            if content_chunk:
-                print(content_chunk, end="")
-                content += content_chunk
-                st.markdown(content)
-            
-            if chunk.choices[0].delta.tool_calls:
-                tool_calls_chunk += chunk.choices[0].delta.tool_calls
-        
-        tool_obj = tool_list_to_obj(tool_calls_chunk)
-        tool_calls = tool_obj["tool_calls"]
-
-        if len(tool_calls) > 0:
-            print(tool_calls)
-
-            tool_call_msg = [tool_call["function"] for tool_call in tool_calls]
-            st.write(tool_call_msg)
-    
-    print('\n=============================')
-    print(content)
-
-    tool_obj = tool_list_to_obj(tool_calls_chunk)
-    tool_calls = tool_obj["tool_calls"]
-    print(tool_calls)
- # 툴 호출 여부 확인
+    tool_calls = ai_message.tool_calls # 툴 호출 여부 확인
     if tool_calls:
         for tool_call in tool_calls:
             tool_name = tool_call.function.name # 호출된 함수 이름
@@ -125,18 +72,12 @@ if user_input := st.chat_input():
         st.session_state.messages.append({"role": "system", "content": "이제 주어진 결과를 바탕으로 답변할 차례다."})
         
         ai_response = get_ai_response(st.session_state.messages) # 도구 결과 반영 후 재응답
-        content = ""
-        with st.chat_message("assistant").empty():
-            for chunk in ai_response:
-                content_chunk = chunk.choices[0].delta.content
-                if content_chunk:
-                    print(content_chunk, end="")
-                    content += content_chunk
-                    st.markdown(content)
+        ai_message = ai_response.choices[0].message
 
     st.session_state.messages.append({
         "role": "assistant",
-        "content":content,
+        "content": ai_message.content,
     })
 
-    print("AI\t:",content)
+    print("AI\t:", ai_message.content)
+    st.chat_message("assistant").write(ai_message.content)
